@@ -340,12 +340,15 @@ interface PositionGroupProps {
   onItemUpdate?: (itemIndex: number, updates: Partial<ReceptionExcelRow>) => void
   onItemNameUpdate?: (itemIndex: number, newName: string) => void
   onServiceNameUpdate?: (newServiceName: string) => void
+  onSubdivisionNameUpdate?: (newSubdivisionName: string) => void
 }
 
-const PositionGroup: React.FC<PositionGroupProps> = ({ positionNumber, items, onItemUpdate, onItemNameUpdate, onServiceNameUpdate }) => {
+const PositionGroup: React.FC<PositionGroupProps> = ({ positionNumber, items, onItemUpdate, onItemNameUpdate, onServiceNameUpdate, onSubdivisionNameUpdate }) => {
   const [isExpanded, setIsExpanded] = useState(true)
   const [isEditingServiceName, setIsEditingServiceName] = useState(false)
+  const [isEditingSubdivisionName, setIsEditingSubdivisionName] = useState(false)
   const [editServiceName, setEditServiceName] = useState(items[0].serviceName)
+  const [editSubdivisionName, setEditSubdivisionName] = useState(items[0].subdivisionName)
   const firstItem = items[0]
 
   const workGroupMap = new Map<string, ReceptionExcelRow[]>()
@@ -377,6 +380,22 @@ const PositionGroup: React.FC<PositionGroupProps> = ({ positionNumber, items, on
     } else if (e.key === 'Escape') {
       setEditServiceName(firstItem.serviceName)
       setIsEditingServiceName(false)
+    }
+  }
+
+  const handleSubdivisionNameSave = () => {
+    if (onSubdivisionNameUpdate && editSubdivisionName.trim() && editSubdivisionName !== firstItem.subdivisionName) {
+      onSubdivisionNameUpdate(editSubdivisionName.trim())
+    }
+    setIsEditingSubdivisionName(false)
+  }
+
+  const handleSubdivisionNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSubdivisionNameSave()
+    } else if (e.key === 'Escape') {
+      setEditSubdivisionName(firstItem.subdivisionName)
+      setIsEditingSubdivisionName(false)
     }
   }
 
@@ -429,7 +448,47 @@ const PositionGroup: React.FC<PositionGroupProps> = ({ positionNumber, items, on
                 )}
               </div>
             )}
-            <p className="text-xs text-gray-600 mt-0.5">{firstItem.subdivisionName}</p>
+            {isEditingSubdivisionName && onSubdivisionNameUpdate ? (
+              <input
+                type="text"
+                value={editSubdivisionName}
+                onChange={(e) => setEditSubdivisionName(e.target.value)}
+                onBlur={handleSubdivisionNameSave}
+                onKeyDown={handleSubdivisionNameKeyDown}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+                className="w-full px-2 py-0.5 text-xs text-gray-600 border border-blue-500 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 mt-0.5"
+              />
+            ) : (
+              <div className="flex items-center gap-1 mt-0.5">
+                <p
+                  className={`text-xs text-gray-600 ${onSubdivisionNameUpdate ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                  onClick={(e) => {
+                    if (onSubdivisionNameUpdate) {
+                      e.stopPropagation()
+                      setIsEditingSubdivisionName(true)
+                    }
+                  }}
+                >
+                  {firstItem.subdivisionName}
+                </p>
+                {onSubdivisionNameUpdate && !isEditingSubdivisionName && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsEditingSubdivisionName(true)
+                    }}
+                    className="text-gray-400 hover:text-blue-600"
+                    title="Редактировать подразделение"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-4">
@@ -535,6 +594,18 @@ export const ReceptionPreview: React.FC<ReceptionPreviewProps> = ({ data, onData
     onDataChange(newData)
   }
 
+  const handleSubdivisionNameUpdate = (positionNumber: number, newSubdivisionName: string) => {
+    if (!onDataChange) return
+
+    const newData = data.map((row) => {
+      if (row.positionNumber === positionNumber) {
+        return { ...row, subdivisionName: newSubdivisionName }
+      }
+      return row
+    })
+    onDataChange(newData)
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-gray-50 p-4 rounded-lg">
@@ -567,6 +638,7 @@ export const ReceptionPreview: React.FC<ReceptionPreviewProps> = ({ data, onData
             onItemUpdate={onDataChange ? (idx, updates) => handleItemUpdate(positionNumber, idx, updates) : undefined}
             onItemNameUpdate={onDataChange ? (idx, newName) => handleItemNameUpdate(positionNumber, idx, newName) : undefined}
             onServiceNameUpdate={onDataChange ? (newServiceName) => handleServiceNameUpdate(positionNumber, newServiceName) : undefined}
+            onSubdivisionNameUpdate={onDataChange ? (newSubdivisionName) => handleSubdivisionNameUpdate(positionNumber, newSubdivisionName) : undefined}
           />
         ))}
       </div>
