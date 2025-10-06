@@ -1,14 +1,7 @@
 import React, { useState } from 'react'
 import { RepairGroup, AcceptanceItem } from '../../types/acceptance'
 import { SubItemRow } from './SubItemRow'
-import {
-  ChevronDown,
-  ChevronUp,
-  Copy,
-  Edit,
-  MoreVertical,
-  Trash2,
-} from 'lucide-react'
+import { ChevronDown, ChevronUp, Copy, CreditCard as Edit, MoveVertical as MoreVertical, Trash2 } from 'lucide-react'
 
 interface RepairItemCardProps {
   group: RepairGroup
