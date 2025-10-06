@@ -51,6 +51,8 @@ export const RepairItemCard: React.FC<RepairItemCardProps> = ({
   onDeleteGroup,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true)
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editedTitle, setEditedTitle] = useState(group.mainItem.description)
 
   // Recalculate totals based on current children state
   const { income, expense, profit } = calculateTotals(group.mainItem.children)
@@ -90,6 +92,34 @@ export const RepairItemCard: React.FC<RepairItemCardProps> = ({
       mainItem: { ...group.mainItem, children: updatedChildren },
     }
     onUpdate(updatedGroup)
+  }
+
+  const handleTitleEdit = () => {
+    setIsEditingTitle(true)
+  }
+
+  const handleTitleSave = () => {
+    if (editedTitle.trim()) {
+      const updatedGroup: RepairGroup = {
+        ...group,
+        mainItem: { ...group.mainItem, description: editedTitle.trim() },
+      }
+      onUpdate(updatedGroup)
+    }
+    setIsEditingTitle(false)
+  }
+
+  const handleTitleCancel = () => {
+    setEditedTitle(group.mainItem.description)
+    setIsEditingTitle(false)
+  }
+
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTitleSave()
+    } else if (e.key === 'Escape') {
+      handleTitleCancel()
+    }
   }
 
   const renderSubItems = (items: AcceptanceItem[]) => {
@@ -158,9 +188,30 @@ export const RepairItemCard: React.FC<RepairItemCardProps> = ({
           <span className="w-8 h-8 flex items-center justify-center bg-indigo-600 text-white rounded-full font-bold text-sm">
             {index}
           </span>
-          <h3 className="text-lg font-semibold text-gray-800">
-            {group.mainItem.description}
-          </h3>
+          {isEditingTitle ? (
+            <input
+              type="text"
+              value={editedTitle}
+              onChange={(e) => setEditedTitle(e.target.value)}
+              onBlur={handleTitleSave}
+              onKeyDown={handleTitleKeyDown}
+              className="text-lg font-semibold text-gray-800 border border-indigo-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              autoFocus
+            />
+          ) : (
+            <>
+              <h3 className="text-lg font-semibold text-gray-800">
+                {group.mainItem.description}
+              </h3>
+              <button
+                onClick={handleTitleEdit}
+                className="text-gray-400 hover:text-indigo-600"
+                title="Редактировать название"
+              >
+                <Edit size={16} />
+              </button>
+            </>
+          )}
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="text-gray-500 hover:text-indigo-600"
