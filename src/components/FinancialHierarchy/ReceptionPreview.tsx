@@ -339,10 +339,13 @@ interface PositionGroupProps {
   items: ReceptionExcelRow[]
   onItemUpdate?: (itemIndex: number, updates: Partial<ReceptionExcelRow>) => void
   onItemNameUpdate?: (itemIndex: number, newName: string) => void
+  onServiceNameUpdate?: (newServiceName: string) => void
 }
 
-const PositionGroup: React.FC<PositionGroupProps> = ({ positionNumber, items, onItemUpdate, onItemNameUpdate }) => {
+const PositionGroup: React.FC<PositionGroupProps> = ({ positionNumber, items, onItemUpdate, onItemNameUpdate, onServiceNameUpdate }) => {
   const [isExpanded, setIsExpanded] = useState(true)
+  const [isEditingServiceName, setIsEditingServiceName] = useState(false)
+  const [editServiceName, setEditServiceName] = useState(items[0].serviceName)
   const firstItem = items[0]
 
   const workGroupMap = new Map<string, ReceptionExcelRow[]>()
@@ -361,26 +364,79 @@ const PositionGroup: React.FC<PositionGroupProps> = ({ positionNumber, items, on
     .reduce((sum, item) => sum + (item.quantity * item.price), 0)
   const profit = incomeTotal + expenseTotal
 
+  const handleServiceNameSave = () => {
+    if (onServiceNameUpdate && editServiceName.trim() && editServiceName !== firstItem.serviceName) {
+      onServiceNameUpdate(editServiceName.trim())
+    }
+    setIsEditingServiceName(false)
+  }
+
+  const handleServiceNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleServiceNameSave()
+    } else if (e.key === 'Escape') {
+      setEditServiceName(firstItem.serviceName)
+      setIsEditingServiceName(false)
+    }
+  }
+
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4">
-      <div
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-t-lg cursor-pointer"
-      >
+      <div className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-t-lg">
         <div className="flex items-center gap-3 flex-1">
-          <span className="flex items-center justify-center w-8 h-8 bg-blue-600 text-white rounded-full text-sm font-bold">
+          <span className="flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-full text-sm font-bold">
             {positionNumber}
           </span>
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">{firstItem.serviceName}</h2>
-            <p className="text-xs text-gray-600">{firstItem.subdivisionName}</p>
+          <div className="flex-1">
+            {isEditingServiceName && onServiceNameUpdate ? (
+              <input
+                type="text"
+                value={editServiceName}
+                onChange={(e) => setEditServiceName(e.target.value)}
+                onBlur={handleServiceNameSave}
+                onKeyDown={handleServiceNameKeyDown}
+                onClick={(e) => e.stopPropagation()}
+                autoFocus
+                className="w-full px-2 py-1 text-sm font-semibold text-gray-900 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            ) : (
+              <div className="flex items-center gap-2">
+                <h2
+                  className={`text-sm font-semibold text-gray-900 ${onServiceNameUpdate ? 'cursor-pointer hover:text-blue-600' : ''}`}
+                  onClick={(e) => {
+                    if (onServiceNameUpdate) {
+                      e.stopPropagation()
+                      setIsEditingServiceName(true)
+                    }
+                  }}
+                >
+                  {firstItem.serviceName}
+                </h2>
+                {onServiceNameUpdate && !isEditingServiceName && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsEditingServiceName(true)
+                    }}
+                    className="text-gray-400 hover:text-blue-600"
+                    title="Редактировать название позиции"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    </svg>
+                  </button>
+                )}
+              </div>
+            )}
+            <p className="text-xs text-gray-600 mt-0.5">{firstItem.subdivisionName}</p>
           </div>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-sm text-green-600 font-medium">↗ {incomeTotal.toLocaleString('ru-RU')} ₽</span>
           <span className="text-sm text-red-600 font-medium">↘ {Math.abs(expenseTotal).toLocaleString('ru-RU')} ₽</span>
           <span className="text-sm text-blue-600 font-semibold">₽ {profit.toLocaleString('ru-RU')} ₽</span>
-          <button className="text-gray-600">
+          <button onClick={() => setIsExpanded(!isExpanded)} className="text-gray-600">
             {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
           </button>
         </div>
@@ -467,6 +523,18 @@ export const ReceptionPreview: React.FC<ReceptionPreviewProps> = ({ data, onData
     onDataChange(newData)
   }
 
+  const handleServiceNameUpdate = (positionNumber: number, newServiceName: string) => {
+    if (!onDataChange) return
+
+    const newData = data.map((row) => {
+      if (row.positionNumber === positionNumber) {
+        return { ...row, serviceName: newServiceName }
+      }
+      return row
+    })
+    onDataChange(newData)
+  }
+
   return (
     <div className="space-y-6">
       <div className="bg-gray-50 p-4 rounded-lg">
@@ -498,6 +566,7 @@ export const ReceptionPreview: React.FC<ReceptionPreviewProps> = ({ data, onData
             items={items}
             onItemUpdate={onDataChange ? (idx, updates) => handleItemUpdate(positionNumber, idx, updates) : undefined}
             onItemNameUpdate={onDataChange ? (idx, newName) => handleItemNameUpdate(positionNumber, idx, newName) : undefined}
+            onServiceNameUpdate={onDataChange ? (newServiceName) => handleServiceNameUpdate(positionNumber, newServiceName) : undefined}
           />
         ))}
       </div>
